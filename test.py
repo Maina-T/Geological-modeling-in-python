@@ -126,7 +126,42 @@ inside1= p.vtktools.pointinsolid(
 ## creating a new domain field
 mydholedb.table['CMP']['Domain']= inside1.astype(int)
 ## first 3 rows of a subtable
-print (mydholedb.table['CMP'][['BHID', 'FROM', 'TO', 'Domain']].head(3))
+# print (mydholedb.table['CMP'][['BHID', 'FROM', 'TO', 'Domain']].head(3))
+
+# exporting results to VTK
+# mydholedb.intervals2vtk('CMP', 'cmp_tagged_samples.vtk')
+
+# exporting to csv
+# mydholedb.table["CMP"].to_csv('cmp_tagged_samples.csv', index=False)
+
+
+###Block modeling
+# creating a block model parameter
+xorg = 2288230
+yorg = 415200
+zorg = -1000
+dx = 100
+dy = 100
+dz = 30
+nx = 160
+ny = 100
+nz = 90
+
+# Creating an empty block model object
+mymodel=p.blockmodel.Blockmodel(nx,ny,nz,xorg,yorg,zorg,dx,dy,dz)
+
+# filling wireframe with blocks
+mymodel.fillwireframe(domain)
+# the fillwireframe function generates a field named  __in,
+# this is the proportion inside the wireframe. Here we rename __in to D1
+mymodel.bmtable.to_csv('wireframe_blocks.csv', index=False)
+print(mymodel.bmtable.head(500))
+mymodel.bmtable.rename(columns={'__in': 'D1'},inplace=True)
+
+# creating a partial model by filtering out blocks with zero proportion (percentage) inside the solid (wireframe)
+mymodel.set_blocks(mymodel.bmtable[mymodel.bmtable['D1']> 60])
+# export partial model to a VTK unstructured grid (*.vtu)
+mymodel.blocks2vtkUnstructuredGrid(path='model.vtu')
 
 # print(type(collar))
 # print (collar.dtypes) # to see the column types and plot the tables
