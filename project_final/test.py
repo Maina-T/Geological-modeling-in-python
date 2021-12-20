@@ -1,33 +1,17 @@
-import pandas as pd
-import pygslib as p
-# import matplotlib.pylab as plt
-import matplotlib.pyplot as plt
-import numpy as np
-from histograms import plot_histogram
 
 
-class Estimate:
+class CalculateVolume:
+    test =155
+    entries = test
 
-    def __init__(self, data):
-        self.data = data
-        # self.block = block_parameters
-
-        
-
-    def load_data(self):
-        """Import data from csv files"""
-        self.collar = pd.read_csv(self.data['collar'])
-        plt.plot(self.collar.XCOLLAR, self.collar.YCOLLAR, 'o')
-        plt.grid()
-        plt.show()
-        # print(self.collar)
-
-if __name__ == "__main__":
-    data = {
-        'collar': 'COLLAR CSV.csv',
-        'survey': 'SURVEY CSV.csv',
-        'assay': 'ASSAY CSV.csv',
-        'geology': 'GEOLOGY.csv',
-    }
-    bot = Estimate(data)
-    bot.load_data()
+    def calculate_volume(self, estimated_block_value):
+        volume_data = []
+        for value in estimated_block_value:
+            cut_off_grade = 42
+            if value > cut_off_grade:
+                volume = (value/self.entries) * 1000
+                volume_data.append(volume)
+        total_volume = sum(volume_data)
+        print('\nTotal ore volume:', total_volume)
+        tonnes_of_ore_to_be_mined = (total_volume) * 2.5
+        print('Tonnes of ore to be mined:', tonnes_of_ore_to_be_mined)

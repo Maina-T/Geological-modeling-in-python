@@ -3,9 +3,10 @@ import pygslib as p
 import matplotlib.pyplot as plt
 import numpy as np
 from histograms import plot_histogram
+from test import CalculateVolume
 
 
-class Estimate:
+class Estimate (CalculateVolume):
 
     def __init__(self, data, block_parameters):
         self.data = data
@@ -20,7 +21,7 @@ class Estimate:
         self.assay = pd.read_csv(self.data['assay'])
         self.geology = pd.read_csv(self.data['geology'])
         self.survey['DIP'] = - self.survey['DIP']
-        self.wireframe = p.vtktools.loadSTL('domain1.stl') #domain1 wireframe
+        self.wireframe = p.vtktools.loadSTL('./data/wireframe.stl') #domain1 wireframe
         # print(self.survey.head(60))
 
     def create_database(self):
@@ -70,8 +71,8 @@ class Estimate:
         self.dhole_db.txt2intID('CMP_assay')
         
         
-        # creating array to tag samples in domain1
-        dm1=p.vtktools.pointinsolid(self.dom1,
+        # creating array to tag samples inside the wireframe
+        dm1=p.vtktools.pointinsolid(self.wireframe,
                             x=self.dhole_db.table['CMP_assay']['xm'].values,
                             y=self.dhole_db.table['CMP_assay']['ym'].values,
                             z=self.dhole_db.table['CMP_assay']['zm'].values)
@@ -180,12 +181,12 @@ class Estimate:
             'id2power'   : 2,   # (optional) float, inverse of the distance powe, defaul 2
             # Variogram parameters
             # ----------
-            'c0'         : 0.25,   # float, nugget value
+            'c0'         : 58.94979,   # float, nugget value
             'it'         : [2],   # array('i'), structures type, on for each structure: 1 Spherical, 2 Exponential, 3 Gaussian, 4 Power, 5 Cosine hole effect
-            'cc'         : [0.75],   # array('f'), structures variance, one for each structure
-            'aa'         : [100],   # array('f'), structures range/practical range in direction 1, one for each structure
-            'aa1'        : [100],   # array('f'), structures range/practical range in direction 2, one for each structure
-            'aa2'        : [100],   # array('f'), structures range/practical range in direction 3, one for each structure
+            'cc'         : [714.8584],   # array('f'), structures variance, one for each structure
+            'aa'         : [10.528],   # array('f'), structures range/practical range in direction 1, one for each structure
+            'aa1'        : [10.528],   # array('f'), structures range/practical range in direction 2, one for each structure
+            'aa2'        : [10.528],   # array('f'), structures range/practical range in direction 3, one for each structure
             'ang1'       : [0.],   # (optional) array('f'), rotation angle 1, one for each structure, defaul array of zeros
             'ang2'       : [0.],   # (optional) array('f'), rotation angle 2, one for each structure, defaul array of zeros
             'ang3'       : [0.]   # (optional) array('f'), rotation angle 3, one for each structure, defaul array of zeros
@@ -200,12 +201,12 @@ class Estimate:
         pd.DataFrame({'x':debug['dbgxdat'],
                     'y':debug['dbgydat'],
                     'z':debug['dbgzdat'],
-                    'wt':debug['dbgwt']}).to_csv('dbg_data.csv', index=False)
+                    'wt':debug['dbgwt']}).to_csv('./files/dbg_data.csv', index=False)
         # save block centroid
-        self.model.bmtable.iloc[[120]][['XC','YC','ZC']].to_csv('dbg_blk.csv', index = False)
+        self.model.bmtable.iloc[[120]][['XC','YC','ZC']].to_csv('./files/dbg_blk.csv', index = False)
 
         # save the search ellipse to a VTK file
-        p.vtktools.SavePolydata(debug['ellipsoid'], 'search_ellipsoid')
+        p.vtktools.SavePolydata(debug['ellipsoid'], './files/search_ellipsoid')
 
 
         # estimate in all blocks
@@ -225,11 +226,17 @@ class Estimate:
         self.model.bmtable['caco3_Lagrange'] = estimate['outlagrange']
         self.model.bmtable['caco3_KVar']= estimate['outkvar']
 
+        estimated_block_value = self.model.bmtable['caco3_OK'].to_list()
+
+
+        self.calculate_volume(estimated_block_value)
+        
+
         # Validations
-        print ("Mean in model OK   :", self.model.bmtable['caco3_OK'].mean())
-        print ("Mean in model ID2   :", self.model.bmtable['caco3_ID2'].mean())
-        print ("Mean in model NN   :", self.model.bmtable['caco3_NN'].mean())
-        print ("Mean in data    :", self.dhole_db.table['CMP_caco3']['caco3'].mean())
+        # print ("Mean in model OK   :", self.model.bmtable['caco3_OK'].mean())
+        # print ("Mean in model ID2   :", self.model.bmtable['caco3_ID2'].mean())
+        # print ("Mean in model NN   :", self.model.bmtable['caco3_NN'].mean())
+        # print ("Mean in data    :", self.dhole_db.table['CMP_caco3']['caco3'].mean())
 
 
         self.model.bmtable.groupby('XC')[['caco3_OK','caco3_ID2','caco3_NN']].mean().plot()
@@ -237,10 +244,11 @@ class Estimate:
         self.model.bmtable.groupby('ZC')[['caco3_OK','caco3_ID2','caco3_NN']].mean().plot()
 
         # plt.show()
+        # plt.savefig('./files/validation')
 
         # save model for visual inspection
-        self.model.blocks2vtkUnstructuredGrid('model')
-        self.model.bmtable.to_csv('model.csv', index=False)
+        self.model.blocks2vtkUnstructuredGrid('./files/model')
+        self.model.bmtable.to_csv('./files/model.csv', index=False)
            
     
     
@@ -255,20 +263,19 @@ class Estimate:
         self.load_data()
         self.create_database()
         self.add_interval_tables()
-        # # # self.validate_intervals_tables()
-        # # # # self.validate_db()
+        self.validate_intervals_tables()
+        self.validate_db()
         self.composite()
-        # self.block_model()
-        # self.estimate()
-        # self.inspect_interval_tables()
+        self.block_model()
+        self.estimate()
     
     
 if __name__ == '__main__':
     data = {
-        'collar': 'COLLAR CSV.csv',
-        'survey': 'SURVEY CSV.csv',
-        'assay': 'ASSAY CSV.csv',
-        'geology': 'GEOLOGY.csv',
+        'collar': './data/COLLAR CSV.csv',
+        'survey': './data/SURVEY CSV.csv',
+        'assay': './data/ASSAY CSV.csv',
+        'geology': './data/GEOLOGY.csv',
     }
     block_parameters = {
         'xorg':309360, #key block x coordinate
